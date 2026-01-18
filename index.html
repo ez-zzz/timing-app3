@@ -563,38 +563,37 @@
 			function beep(){ try{ const ctx = new (window.AudioContext||window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='sine'; o.frequency.value = 880; g.gain.value = 0.0001; o.connect(g); g.connect(ctx.destination); g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02); o.start(); g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 1.2); setTimeout(()=>{ o.stop(); ctx.close(); }, 1300); }catch(e){/* ignore */} }
 
 			// gentle bell with stop capability
-			let _bell = {ctx:null, osc:null, gain:null, timeoutId:null};
+			let _bell = {ctx:null, audio:null, timeoutId:null};
 			function stopBell(){
 				try{
 					if(_bell.timeoutId) clearTimeout(_bell.timeoutId);
-					if(_bell.osc){ try{ _bell.gain.exponentialRampToValueAtTime(0.00001, _bell.ctx.currentTime + 0.05); }catch(e){}
-						try{ _bell.osc.stop(); }catch(e){}
+					if(_bell.audio){ 
+						try{ _bell.audio.pause(); _bell.audio.currentTime = 0; }catch(e){}
 					}
-					if(_bell.ctx){ try{ _bell.ctx.close(); }catch(e){}
-					}
+					if(_bell.ctx){ try{ _bell.ctx.close(); }catch(e){} }
 				}catch(e){}
-				_bell = {ctx:null,osc:null,gain:null,timeoutId:null};
+				_bell = {ctx:null, audio:null, timeoutId:null};
 			}
 
 			function bellGentle(){
 				if(!bellToggle || !bellToggle.checked) return;
 				stopBell();
 				try{
+					const audio = new Audio('sound-of-chirping-birds-at-dawn-and-dusk-hd-261322.mp3');
 					const ctx = new (window.AudioContext||window.webkitAudioContext)();
-					const o = ctx.createOscillator();
-					const g = ctx.createGain();
-					o.type = 'sine';
-					o.frequency.value = 720;
-					g.gain.value = 0.0001;
-					o.connect(g); g.connect(ctx.destination);
-					g.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.02);
-					o.start();
-					_bell.ctx = ctx; _bell.osc = o; _bell.gain = g;
+					const source = ctx.createMediaElementSource(audio);
+					const gainNode = ctx.createGain();
+					gainNode.gain.value = 1.5; // Louder volume
+					source.connect(gainNode);
+					gainNode.connect(ctx.destination);
+					audio.currentTime = 0;
+					audio.play();
+					_bell.ctx = ctx;
+					_bell.audio = audio;
 					_bell.timeoutId = setTimeout(()=>{
-						try{ g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.6); }catch(e){}
-						try{ o.stop(); ctx.close(); }catch(e){}
-						_bell = {ctx:null,osc:null,gain:null,timeoutId:null};
-					}, 1200);
+						try{ audio.pause(); audio.currentTime = 0; ctx.close(); }catch(e){}
+						_bell = {ctx:null, audio:null, timeoutId:null};
+					}, 7000); // At least 7 seconds
 				}catch(e){console.warn('bell failed',e)}
 			}
 
